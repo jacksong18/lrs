@@ -1,0 +1,28 @@
+.hidden {
+    display: none;
+}
+.night-count-text {
+    float: left;
+    width: 114px;
+    height: 30px;
+    line-height: 30px;
+    font-size: 18px;
+    font-weight: 800;
+    color: rgb(41, 50, 95);
+}
+.action-hunter-status-capable {
+    font-weight: 600;
+    color: rgb(19, 160, 1);
+}
+.action-hunter-status-uncapable {
+    font-weight: 600;
+    color: rgb(255, 8, 21);
+}
+.action-seer-good {
+    font-weight: 600;
+    color: rgb(19, 160, 1);
+}
+.action-seer-bad {
+    font-weight: 600;
+    color: rgb(255, 8, 21);
+}

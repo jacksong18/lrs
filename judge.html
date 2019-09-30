@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>法官版</title>
+    <meta content="yes" name="apple-mobile-web-app-capable">
+    <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <link rel="icon" href="icon.jpg">
+    <link rel="stylesheet" type="text/css" media="screen" href="judge.css" />
+    <link rel="stylesheet" type="text/css" media="screen" href="player.css" />
+    <script src="jquery-1.12.4.js"></script>
+    <script src="js.cookie.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="game_pattern">
+            <label for="game_pattern_select" class="form-label">选择板子</label><br>
+            <select id="game_pattern_select" name="game_pattern_select">
+                <option value="yunvliebai">预女猎白</option>
+            </select><br>
+            <input type="submit" id="game_pattern_submit" class="input-submit" value="发身份牌">
+            <input type="submit" id="reset_game" class="input-submit" value="重新开局">
+        </div>
+        <div class="player-container">
+            <div class="user-container user-container-left">
+                <div class="user-info"><input type="hidden" class="nth-user" value="0"><div class="user-number">1</div><div class="death-mask hidden"></div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-left"></div><div class="user-name user-name-left"></div></div>
+                <div class="user-info"><input type="hidden" class="nth-user" value="1"><div class="user-number">2</div><div class="death-mask hidden"></div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-left"></div><div class="user-name user-name-left"></div></div>
+                <div class="user-info"><input type="hidden" class="nth-user" value="2"><div class="user-number">3</div><div class="death-mask hidden"></div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-left"></div><div class="user-name user-name-left"></div></div>
+                <div class="user-info"><input type="hidden" class="nth-user" value="3"><div class="user-number">4</div><div class="death-mask hidden"></div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-left"></div><div class="user-name user-name-left"></div></div>
+                <div class="user-info"><input type="hidden" class="nth-user" value="4"><div class="user-number">5</div><div class="death-mask hidden"></div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-left"></div><div class="user-name user-name-left"></div></div>
+                <div class="user-info"><input type="hidden" class="nth-user" value="5"><div class="user-number">6</div><div class="death-mask hidden"></div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-left"></div><div class="user-name user-name-left"></div></div>
+            </div>
+            <div class="mid-container">
+                <div class="vote-result-display">
+                </div>
+                <div class="game-status">准备中</div>
+            </div>
+            <div class="user-container user-container-right">
+                <div class="user-info"><input type="hidden" class="nth-user" value="6"><div class="user-number">7</div><div class="death-mask hidden"></div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-right"></div><div class="user-name user-name-right"></div></div>
+                <div class="user-info"><input type="hidden" class="nth-user" value="7"><div class="user-number">8</div><div class="death-mask hidden"></div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-right"></div><div class="user-name user-name-right"></div></div>
+                <div class="user-info"><input type="hidden" class="nth-user" value="8"><div class="user-number">9</div><div class="death-mask hidden"></div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-right"></div><div class="user-name user-name-right"></div></div>
+                <div class="user-info"><input type="hidden" class="nth-user" value="9"><div class="user-number">10</div><div class="death-mask hidden"></div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-right"></div><div class="user-name user-name-right"></div></div>
+                <div class="user-info"><input type="hidden" class="nth-user" value="10"><div class="user-number">11</div><div class="death-mask hidden"></div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-right"></div><div class="user-name user-name-right"></div></div>
+                <div class="user-info"><input type="hidden" class="nth-user" value="11"><div class="user-number">12</div><div class="death-mask hidden"></div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-right"></div><div class="user-name user-name-right"></div></div>
+            </div>
+            <div class="night-actions">
+            </div>
+        </div>
+    </div>
+    <script src="lrs-server/socket.io.js"></script>
+    <script src="common_func.js"></script>
+    <script>
+        var gamePattern = -1;
+        var roleAssignment = [];
+        var nightRoles = [];
+        var deadSeats = [];
+        var sheriffHuntStatus = [];
+        var isInGame = false;
+        var sheriffHuntVotes = [];
+        // 第一晚开始
+        var nightCount = 1;
+        var nextRoleIndex = 0;
+        var witchHasCure = true;
+        var witchHasPoison = true;
+        var seerSurvive = true;
+        var hunterStatusCapable = true;
+        var activeTarget = -1;
+        var nightActionsHtml = '';
+        // eg. {Role.WEREWOLF: 8, Role.WITCH: 6}
+        // 狼人杀8 女巫毒6
+        var deads = {};
+        var statusBarText = '';
+        var validCandidates = [];
+
+        $(function() {
+            var socket = io('http://www.logo-labo.com:3000');
+            init(socket);
+
+            socket.on('get seat infos', function(data){
+                isInGame = data.isInGame;
+                if (!isInGame) {
+                    let seatInfos = data.seatInfos;
+                    for(let i = 0; i < seatInfos.length; i++){
+                        if ("" != seatInfos[i]) {
+                            let obj = $('.nth-user[value="' + i + '"]').parent();
+                            setSeat(socket, obj, seatInfos[i].username, seatInfos[i].avatar_path);
+                        }
+                    }
+                } else {
+                    socket.emit('get game infos');
+                }
+            });
+            socket.on('get game infos', function(data){
+                gamePattern = data.gamePattern;
+                roleAssignment = data.roleAssignment;
+                setNightRoles(gamePattern);
+                deadSeats = data.deadSeats;
+                sheriffHuntStatus = data.sheriffHuntStatus;
+                socket.emit('get judge data');
+            }); 
+            socket.on('get judge data', function(data){
+                nightCount = data.nightCount;
+                nextRoleIndex = data.nextRoleIndex;
+                witchHasCure = data.witchHasCure;
+                witchHasPoison = data.witchHasPoison;
+                seerSurvive = data.seerSurvive;
+                hunterStatusCapable = data.hunterStatusCapable;
+                activeTarget = data.activeTarget;
+                nightActionsHtml = data.nightActionsHtml;
+                deads = data.deads;
+                statusBarText = data.statusBarText;
+
+                for(let i = 0; i < deadSeats.length; i++){
+                    killOne(deadSeats[i]);
+                }
+                showRoleAssignment();
+                setSheriffHuntStatus(sheriffHuntStatus);
+                $('.night-actions').html(nightActionsHtml);
+                setStatusBar(statusBarText);
+            }); 
+            socket.on('sheriff hunt status', function($sheriffHuntStatus){
+                sheriffHuntStatus = $sheriffHuntStatus;
+                setSheriffHuntStatus(sheriffHuntStatus);
+                if ($('.action-announce-sheriffhunt-vote').hasClass('hidden')) {
+                    $('.action-announce-sheriffhunt-vote').removeClass('hidden');
+                }
+            });
+            socket.on('sheriff hunt vote result', function($sheriffHuntVotes){
+                sheriffHuntVotes = $sheriffHuntVotes;
+                sheriffHuntVoteResult($sheriffHuntVotes, true);
+                // draw
+                if (validCandidates && 2 == validCandidates.length) {
+                    let $html = '<input type="button" class="action-button action-announce-sheriffhunt-vote-again" value="宣布再次进行警长投票">';
+                    nightActionsAppendHtml(socket, $html);
+                }
+            });
+            socket.on('sheriff hunt vote result again', function($sheriffHuntVotes){
+                sheriffHuntVotes = $sheriffHuntVotes;
+                sheriffHuntVoteResult($sheriffHuntVotes, false);
+            });
+            socket.on('set other seat', function(data){
+                setOtherSeat(data.seatNumber, data.username, data.avatar_path);
+            });
+            socket.on('unseat other', function(data){
+                unSeatOther(data.seatNumber);
+            });
+            socket.on('role assignment', function($roleAssignment){
+                roleAssignment = $roleAssignment;
+                showRoleAssignment();
+                statusBarText = '确认身份中';
+                setStatusBar(statusBarText);
+                socket.emit('data statusBarText', statusBarText);
+            });
+
+            $('#game_pattern_submit').click(function(){
+                gamePattern = convertGamePattern($('#game_pattern_select').val());
+                socket.emit('set game pattern', gamePattern);
+                setNightRoles(gamePattern);
+                let html = '';
+                html += '<div class="nth-night-action">';
+                html += '   <div class="night-count-text">第一夜</div>';
+                html += '   <input type="button" class="action-button action-dark" value="天黑了">';
+                html += '</div>';
+                $('.night-actions').html(html);
+                socket.emit('data nightActionsHtml', html);
+            });
+
+            $('#reset_game').click(function(){
+                gamePattern = -1;
+                roleAssignment = [];
+                nightRoles = [];
+                deadSeats = [];
+                sheriffHuntStatus = [];
+                isInGame = false;
+                sheriffHuntVotes = [];
+
+                nightCount = 1;
+                nextRoleIndex = 0;
+                witchHasCure = true;
+                witchHasPoison = true;
+                seerSurvive = true;
+                hunterStatusCapable = true;
+                activeTarget = -1;
+                deads = {};
+                nightActionsHtml = '';
+                statusBarText = '';
+                validCandidates = [];
+                $('.night-actions').html('');
+                $('.death-mask').each(function(){
+                    if (!$(this).hasClass('hidden')) {
+                        $(this).addClass('hidden');
+                    }
+                });
+                statusBarText = '准备中';
+                setStatusBar(statusBarText);
+                socket.emit('data statusBarText', statusBarText);
+                socket.emit('get seat infos');
+                socket.emit('reset game');
+            });
+
+            $('.user-info').click(function(){
+                activeTarget = parseInt($(this).children('.nth-user').val());
+                let $tmpSeatNumber = activeTarget + 1;
+                $('.action-target-active').html($tmpSeatNumber);
+                let $obj = $('.action-new-confirm');
+                $obj.attr('disabled', false);
+                $obj.removeClass('action-new-confirm');
+                socket.emit('data nightActionsHtml', $('.night-actions').html());
+            });
+
+            $('.night-actions').on('click', '.action-confirm-werewolf', function(){
+                deads[Role.WEREWOLF] = activeTarget;
+                activeTarget = -1;
+            });
+
+            $('.night-actions').on('click', '.action-confirm-seer', function(){
+                $(this).attr('disabled', true);
+                if (-1 != activeTarget) {
+                    let html = '';
+                    html += '<div class="clear-float"></div>';
+                    html += '<div class="role-action action-seer-results">';
+                    if (Role.WEREWOLF == roleAssignment[activeTarget]) {
+                        html += '   <div class="action-text"">TA是&nbsp;<span class="action-seer-bad">狼人</span></div>';
+                    } else {
+                        html += '   <div class="action-text"">TA是&nbsp;<span class="action-seer-good">好人</span></div>';
+                    }
+                    html += '</div>';
+                    html = $('.nth-night-action').html() + html;
+                    $('.nth-night-action').html(html);
+                    socket.emit('data nightActionsHtml', $('.night-actions').html());
+                }
+            });
+
+            $('.night-actions').on('click', '.action-announce-sheriffhunt-vote', function(){
+                $(this).attr('disabled', true);
+                announceSheriffHuntVote(socket);
+            });
+
+            $('.night-actions').on('click', '.action-announce-sheriffhunt-vote-again', function(){
+                $(this).attr('disabled', true);
+                statusBarText = '现在再次进行警长投票';
+                setStatusBar(statusBarText);
+                socket.emit('announce sheriff hunt vote again');
+            });
+
+            $('.night-actions').on('click', '.action-announce-sheriffhunt', function(){
+                $(this).attr('disabled', true);
+                announceSheriffHunt(socket);
+            });
+
+            $('.night-actions').on('click', '.action-announce-deathinfo', function(){
+                $(this).attr('disabled', true);
+                announceDeathInfo(socket);
+            });
+
+            $('.night-actions').on('click', '.action-confirm-witch', function(){
+                if (-1 != activeTarget) {
+                    witchHasPoison = false;
+                    deads[Role.WITCH] = activeTarget;
+                    if (Role.HUNTER == roleAssignment[activeTarget]) {
+                        hunterStatusCapable = false;
+                    }
+                }
+            });
+
+            $('.night-actions').on('click', '.action-dark', function(){
+                $(this).attr('disabled', true);
+                appendNextRoleHtml(socket);
+            });
+
+            $('.night-actions').on('click', '.action-confirm', function(){
+                $(this).attr('disabled', true);
+                let $obj = $(this).parent().children('.action-target');
+                if ($obj.hasClass('action-target-active')) {
+                    $obj.removeClass('action-target-active');
+                    $obj.addClass('action-target-inactive');
+                }
+                appendNextRoleHtml(socket);
+                if (nightRoles.length == nextRoleIndex) {
+                    nightEnds(socket);
+                }
+            });
+
+            $('.night-actions').on('click', '.action-button-witch-save', function(){
+                delete deads[Role.WEREWOLF];
+                $(this).attr('disabled', true);
+                let $obj = $(this).parent().children('.action-button-witch-nosave');
+                $obj.attr('disabled', true);
+                if (witchHasCure && witchHasPoison) {
+                    let html = '';
+                    html += '<div class="clear-float"></div>';
+                    html += '<div class="role-action action-witch-poison">';
+                    html += '   <div class="action-text" style="color: grey">女巫&nbsp;毒&nbsp;&nbsp;&nbsp;&nbsp;</div>';
+                    html += '   <div class="action-target action-target-inactive"></div>';
+                    html += '   <input type="button" class="action-button action-confirm action-confirm-witch" value="确定">';
+                    html += '</div>';
+                    html = $('.nth-night-action').html() + html;
+                    $('.nth-night-action').html(html);
+                    socket.emit('data nightActionsHtml', $('.night-actions').html());
+                }
+                witchHasCure = false;
+            });
+            $('.night-actions').on('click', '.action-button-witch-nosave', function(){
+                $(this).attr('disabled', true);
+                let $obj = $(this).parent().children('.action-button-witch-save');
+                $obj.attr('disabled', true);
+                if (witchHasCure && witchHasPoison) {
+                    let html = '';
+                    html += '<div class="clear-float"></div>';
+                    html += '<div class="role-action action-witch-poison">';
+                    html += '   <div class="action-text">女巫&nbsp;毒&nbsp;&nbsp;&nbsp;&nbsp;</div>';
+                    html += '   <div class="action-target action-target-active"></div>';
+                    html += '   <input type="button" class="action-button action-confirm action-confirm-witch" value="确定">';
+                    html += '</div>';
+                    html = $('.nth-night-action').html() + html;
+                    $('.nth-night-action').html(html);
+                    nightActionsHtml = html;
+                    socket.emit('data nightActionsHtml', nightActionsHtml);
+                }
+            });
+        });
+
+        function nightActionsAppendHtml($socket, $html){
+            nightActionsHtml = $('.night-actions').html() + $html;
+            $('.night-actions').html(nightActionsHtml);
+            $socket.emit('data nightActionsHtml', nightActionsHtml);
+        }
+
+        function showRoleAssignment(){
+            for(let i = 0; i < roleAssignment.length; i++){
+                let $obj = $('.nth-user[value="' + i + '"]').parent();
+                let user_circle = $obj.children('.user-circle');
+                user_circle.html(getRoleName(roleAssignment[i]));
+            }
+        }
+
+        function whoWin(){
+            if (isAllDead(Role.TOWNSFOLK) || areAllDead([Role.SEER, Role.WITCH, Role.HUNTER, Role.IDIOT])) {
+                return Victory.WEREWOLF;
+            } else  if (isAllDead(Role.WEREWOLF)) {
+                return Victory.GOOD;
+            } else {
+                return Victory.NOTEND;
+            }
+        }
+
+        function isAllDead($role){
+            for (let i = 0; i < roleAssignment.length; i++) {
+                if ($role == roleAssignment[i] && !deadSeats.includes(i)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function areAllDead($roles){
+            for (let i = 0; i < roleAssignment.length; i++) {
+                for (let j = 0; j < $roles.length; j++) {
+                    if ($roles[j] == roleAssignment[i]) {
+                        if (!deadSeats.includes(i)) {
+                            return false;
+                        }
+                        break;
+                    }
+                }
+            }
+            return true;
+        }
+        function announceSheriffHuntVote($socket){
+            statusBarText = '现在开始警长投票';
+            setStatusBar(statusBarText);
+            $socket.emit('set status bar', statusBarText);
+            $socket.emit('announce sheriff hunt vote');
+            $socket.emit('data statusBarText', statusBarText);
+        }
+
+        function announceSheriffHunt($socket){
+            statusBarText = '天亮了，现在开始警长竞选，请上警';
+            setStatusBar(statusBarText);
+            $socket.emit('set status bar', statusBarText);
+            $socket.emit('announce sheriff hunt');
+            $socket.emit('data statusBarText', statusBarText);
+            let $html = '<input type="button" class="action-button action-announce-sheriffhunt-vote hidden" value="宣布进行警长投票">';
+            nightActionsAppendHtml($socket, $html);
+        }
+
+        function announceDeathInfo($socket){
+            let $statusText = '';
+            if (0 == Object.keys(deads).length) {
+                $statusText = '昨晚是平安夜';
+            } else {
+                Object.keys(deads).forEach(function (key) { 
+                    let $deadNumber = deads[key];
+                    let $deadSeatNumber = parseInt($deadNumber) + 1;
+                    killOne($socket, $deadNumber);
+                    if ('' == $statusText) {
+                        $statusText = '昨晚死亡的是' + $deadSeatNumber + '号';
+                    } else {
+                        $statusText += '、' + $deadSeatNumber + '号';
+                    }
+                })
+                $statusText += '玩家';
+            }
+
+            statusBarText = $statusText;
+            setStatusBar(statusBarText);
+            $socket.emit('set status bar', statusBarText);
+            socket.emit('data statusBarText', statusBarText);
+        }
+
+        function nightEnds($socket){
+            let html = '';
+            if (1 == nightCount) {
+                html += '<input type="button" class="action-button action-announce-sheriffhunt" value="宣布上警">';
+            } else {
+                html += '<input type="button" class="action-button action-announce-deathinfo" value="宣布死亡信息">';
+            }
+            html = $('.night-actions').html() + html;
+            $('.night-actions').html(html);
+            nightCount++;
+            $socket.emit('data nightActionsHtml', $('.night-actions').html());
+            $socket.emit('data nightCount', nightCount);
+            $socket.emit('data nightActionsHtml', html);
+        }
+
+        function killOne($socket, $seatNumber){
+            deadSeats.push($seatNumber);
+            $obj = $('.nth-user[value="' + $seatNumber + '"]').parent().children('.death-mask');
+            $obj.removeClass('hidden');
+            $socket.emit('kill one', { deadSeats: deadSeats, seatNumber: $seatNumber });
+        }
+
+        function witchGetKilled(){
+            for(let key in deads) {
+                let $seatNumber = deads[key];
+                if (Role.WITCH == roleAssignment[$seatNumber]) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function appendNextRoleHtml($socket){
+            let appendHtml = getNextRoleHtml();
+            if ("" == appendHtml) {
+                return -1;
+            }
+            let html = $('.nth-night-action').html();
+            html += appendHtml;
+            $('.nth-night-action').html(html);
+            $socket.emit('data nightActionsHtml', $('.night-actions').html());
+        }
+
+        function getNextRoleHtml(){
+            if (nightRoles.length == nextRoleIndex) {
+                return "";
+            }
+            let html = '';
+            html += '<div class="clear-float"></div>';
+            html += getRoleActionHtml(nightRoles[nextRoleIndex]);
+            nextRoleIndex++;
+            return html;
+        }
+
+        function init($socket){
+            $socket.emit('get seat infos');
+        }
+
+        function setNightRoles($game_pattern){
+            switch($game_pattern){
+                case GamePattern.YUNVLIEBAI:
+                    let roles = [Role.WEREWOLF, Role.SEER, Role.WITCH, Role.HUNTER, Role.IDIOT, Role.TOWNSFOLK];
+                    nightRoles = sortRoles(roles);
+                    return;
+                default:
+            }
+        }
+
+        function sortRoles($roles){
+            // 应该所有的板子都会有狼
+            let $result = [Role.WEREWOLF];
+            let $helper = [];
+            for(let i = 0; i < $roles.length; i++){
+                let $role = $roles[i];
+                let $priority = getRolePriority($role);
+                if (Role.WEREWOLF != $role && RolePriority.BLIND != $priority) {
+                    $helper[$priority] = $role;
+                }
+            }
+            for(let i = 0; i < $helper.length; i++){
+                if ($helper[i]) {
+                    $result.push($helper[i]);
+                }
+            }
+            return $result;
+        }
+
+        function getRoleActionHtml($role){
+            let html = '';
+            switch($role){
+                case Role.WEREWOLF:
+                    html += '<div class="role-action action-werewolf">';
+                    html += '   <span class="action-text">狼人&nbsp;刀&nbsp;</span>';
+                    html += '   <div class="action-target action-target-active"></div>';
+                    html += '   <input type="button" class="action-confirm action-new-confirm action-confirm-werewolf" value="确定" disabled>';
+                    html += '</div>';
+                    return html;
+                case Role.TOWNSFOLK:
+                    return html;
+                case Role.SEER:
+                    html += '<div class="role-action action-seer">';
+                    html += '   <span class="action-text">预言家&nbsp;验&nbsp;</span>';
+                    if (seerSurvive) {
+                        html += '   <div class="action-target action-target-active"></div>';
+                        html += '   <input type="button" class="action-confirm action-new-confirm action-confirm-seer" value="确定" disabled>';
+                    } else {
+                        html += '   <div class="action-target action-target-inactive"></div>';
+                        html += '   <input type="button" class="action-confirm action-confirm-seer" value="确定">';
+                    }
+                    html += '</div>';
+                    return html;
+                case Role.WITCH:
+                    if (witchHasCure && witchHasPoison) {
+                        html += '<div class="role-action action-witch-save">';
+                        html += '   <div class="action-text">女巫救人？&nbsp;&nbsp;&nbsp;&nbsp;</div>';
+                        if (witchGetKilled()) {
+                            html += '   <input type="button" class="action-button action-button-witch-save" value="救人" disabled>';
+                            html += '   <input type="button" class="action-button action-button-witch-nosave" value="不救" disabled>';
+                            html += '</div>';
+                            html += '<div class="clear-float"></div>';
+                            html += '<div class="role-action action-witch-poison">';
+                            html += '   <div class="action-text">女巫&nbsp;毒&nbsp;&nbsp;&nbsp;&nbsp;</div>';
+                            html += '   <div class="action-target action-target-active"></div>';
+                            html += '   <input type="button" class="action-button action-confirm action-new-confirm action-confirm-witch" value="确定">';
+                            html += '</div>';
+                        } else {
+                            html += '   <input type="button" class="action-button action-button-witch-save" value="救人">';
+                            html += '   <input type="button" class="action-button action-button-witch-nosave" value="不救">';
+                            html += '</div>';
+                        }
+                    } else if (witchHasPoison) {
+                        html += '<div class="role-action action-witch-save">';
+                        html += '   <div class="action-text">女巫救人？&nbsp;&nbsp;&nbsp;&nbsp;</div>';
+                        html += '   <input type="button" class="action-button action-button-witch-save" value="救人" disabled>';
+                        html += '   <input type="button" class="action-button action-button-witch-nosave" value="不救" disabled>';
+                        html += '</div>';
+                        html += '<div class="clear-float"></div>';
+                        html += '<div class="role-action action-witch-poison">';
+                        html += '   <div class="action-text">女巫&nbsp;毒&nbsp;&nbsp;&nbsp;&nbsp;</div>';
+                        html += '   <div class="action-target action-target-active"></div>';
+                        html += '   <input type="button" class="action-button action-confirm action-new-confirm action-confirm-witch" value="确定">';
+                        html += '</div>';
+                    } else if (witchHasCure) {
+                        html += '<div class="role-action action-witch-save">';
+                        html += '   <div class="action-text">女巫救人？&nbsp;&nbsp;&nbsp;&nbsp;</div>';
+                        if (witchGetKilled()) {
+                            html += '   <input type="button" class="action-button action-button-witch-save" value="救人" disabled>';
+                            html += '   <input type="button" class="action-button action-button-witch-nosave" value="不救" disabled>';
+                        } else {
+                            html += '   <input type="button" class="action-button action-button-witch-save" value="救人">';
+                            html += '   <input type="button" class="action-button action-button-witch-nosave" value="不救">';
+                        }
+                        html += '</div>';
+                        html += '<div class="clear-float"></div>';
+                        html += '<div class="role-action action-witch-poison">';
+                        html += '   <div class="action-text" style="color: grey">女巫&nbsp;毒&nbsp;&nbsp;&nbsp;&nbsp;</div>';
+                        html += '   <div class="action-target action-target-inactive"></div>';
+                        html += '   <input type="button" class="action-button action-confirm action-confirm-witch" value="确定">';
+                        html += '</div>';
+                    } else {
+                        html += '<div class="role-action action-witch-save">';
+                        html += '   <div class="action-text">女巫救人？&nbsp;&nbsp;&nbsp;&nbsp;</div>';
+                        html += '   <input type="button" class="action-button action-button-witch-save" value="救人" disabled>';
+                        html += '   <input type="button" class="action-button action-button-witch-nosave" value="不救" disabled>';
+                        html += '</div>';
+                        html += '<div class="clear-float"></div>';
+                        html += '<div class="role-action action-witch-poison">';
+                        html += '   <div class="action-text" style="color: grey">女巫&nbsp;毒&nbsp;&nbsp;&nbsp;&nbsp;</div>';
+                        html += '   <div class="action-target action-target-inactive"></div>';
+                        html += '   <input type="button" class="action-button action-confirm action-confirm-witch" value="确定">';
+                        html += '</div>';
+                    }
+                    return html;
+                case Role.HUNTER:
+                    html += '<div class="role-action action-hunter">';
+                    html += '   <div class="action-text">猎人确认开枪状态&nbsp;</div>';
+                    if (hunterStatusCapable) {
+                        html += '   <div class="action-hunter-status action-hunter-status-capable">能开枪</div>';
+                    } else {
+                        html += '   <div class="action-hunter-status action-hunter-status-uncapable">不能开枪</div>';
+                    }
+                    html += '</div>';
+                    return html;
+                case Role.IDIOT:
+                    return html;
+                default:
+                    return html;
+            }
+        }
+    </script>
+</body>
+</html>

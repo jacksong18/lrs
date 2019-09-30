@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>玩家版</title>
+    <meta content="yes" name="apple-mobile-web-app-capable">
+    <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <link rel="icon" href="icon.jpg">
+    <link rel="stylesheet" type="text/css" media="screen" href="player.css" />
+    <script src="jquery-1.12.4.js"></script>
+    <script src="js.cookie.js"></script>
+</head>
+<body>
+    <div class="player-container">
+        <div class="user-container user-container-left">
+            <div class="user-info"><input type="hidden" class="nth-user" value="0"><div class="user-number">1</div><div class="death-mask hidden">死&nbsp;亡</div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-left"></div><div class="user-name user-name-left"></div></div>
+            <div class="user-info"><input type="hidden" class="nth-user" value="1"><div class="user-number">2</div><div class="death-mask hidden">死&nbsp;亡</div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-left"></div><div class="user-name user-name-left"></div></div>
+            <div class="user-info"><input type="hidden" class="nth-user" value="2"><div class="user-number">3</div><div class="death-mask hidden">死&nbsp;亡</div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-left"></div><div class="user-name user-name-left"></div></div>
+            <div class="user-info"><input type="hidden" class="nth-user" value="3"><div class="user-number">4</div><div class="death-mask hidden">死&nbsp;亡</div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-left"></div><div class="user-name user-name-left"></div></div>
+            <div class="user-info"><input type="hidden" class="nth-user" value="4"><div class="user-number">5</div><div class="death-mask hidden">死&nbsp;亡</div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-left"></div><div class="user-name user-name-left"></div></div>
+            <div class="user-info"><input type="hidden" class="nth-user" value="5"><div class="user-number">6</div><div class="death-mask hidden">死&nbsp;亡</div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-left"></div><div class="user-name user-name-left"></div></div>
+        </div>
+        <div class="mid-container">
+            <div class="vote-result-display">
+            </div>
+            <div class="game-status">准备中</div>
+        </div>
+        <div class="user-container user-container-right">
+            <div class="user-info"><input type="hidden" class="nth-user" value="6"><div class="user-number">7</div><div class="death-mask hidden">死&nbsp;亡</div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-right"></div><div class="user-name user-name-right"></div></div>
+            <div class="user-info"><input type="hidden" class="nth-user" value="7"><div class="user-number">8</div><div class="death-mask hidden">死&nbsp;亡</div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-right"></div><div class="user-name user-name-right"></div></div>
+            <div class="user-info"><input type="hidden" class="nth-user" value="8"><div class="user-number">9</div><div class="death-mask hidden">死&nbsp;亡</div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-right"></div><div class="user-name user-name-right"></div></div>
+            <div class="user-info"><input type="hidden" class="nth-user" value="9"><div class="user-number">10</div><div class="death-mask hidden">死&nbsp;亡</div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-right"></div><div class="user-name user-name-right"></div></div>
+            <div class="user-info"><input type="hidden" class="nth-user" value="10"><div class="user-number">11</div><div class="death-mask hidden">死&nbsp;亡</div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-right"></div><div class="user-name user-name-right"></div></div>
+            <div class="user-info"><input type="hidden" class="nth-user" value="11"><div class="user-number">12</div><div class="death-mask hidden">死&nbsp;亡</div><div class="user-circle unseated">入座</div><div class="sheriff-hunt-icon sheriff-hunt-icon-right"></div><div class="user-name user-name-right"></div></div>
+        </div>
+        <input type="button" class="action-button action-sheriffhunt hidden" value="上警">
+        <div class="clear-float"></div>
+        <input type="button" class="action-button action-sheriffhunt-quit hidden" value="退水">
+        <div class="role-action sheriff-hunt-vote vote hidden">
+            <div class="action-text sheriff-hunt-vote-text">警长投票选</div>
+            <div class="action-target action-target-active"></div>
+            <input type="button" class="action-button action-confirm action-sheriff-hunt-vote" value="确定">
+        </div>
+        <div class="role-action sheriff-hunt-vote-again vote hidden">
+            <div class="action-text sheriff-hunt-vote-text">再次警长投票选</div>
+            <div class="action-target action-target-active"></div>
+            <input type="button" class="action-button action-confirm action-sheriff-hunt-vote" value="确定">
+        </div>
+    </div>
+    <script src="lrs-server/socket.io.js"></script>
+    <script src="common_func.js"></script>
+    <script>
+        var username = "";
+        var avatar_path = "";
+        var seatNumber = -1;
+        var isInGame = false;
+        var role = -1;
+        var selfCircleHtml = "";
+        var deadSeats = [];
+        var sheriffHuntStatus = [];
+        var activeTarget = -1;
+        var validCandidates = [];
+
+        $(function() {
+            let token = getToken();
+            const socket = io('http://www.logo-labo.com:3000');
+
+            if (token === undefined) {
+                window.location.replace('http://www.logo-labo.com/lrs/login.html');
+            } else {
+                init(socket, token);
+            }
+            socket.on('get user info', function(user){
+                username = user.username;
+                avatar_path = user.avatar_path;
+            });
+            socket.on('get seat infos', function(data){
+                isInGame = data.isInGame;
+                let seatInfos = data.seatInfos;
+                for(let i = 0; i < seatInfos.length; i++){
+                    if ("" != seatInfos[i]) {
+                        let obj = $('.nth-user[value="' + i + '"]').parent();
+                        setSeat(socket, obj, seatInfos[i].username, seatInfos[i].avatar_path);
+                        if (avatar_path == seatInfos[i].avatar_path) {
+                            seatNumber = i;
+                        }
+                    }
+                }
+            });
+            socket.on('get death infos', function($deadSeats){
+                deadSeats = $deadSeats;
+                for(let i = 0; i < deadSeats.length; i++){
+                    killOne(deadSeats[i]);
+                }
+            });
+            socket.on('freeze seat', function(){
+                isInGame = true;
+                setStatusBar('请确认身份');
+            });
+            socket.on('get role', function($role){
+                role = $role;
+                checkRole();
+            });
+            socket.on('set status bar', function($statusText){
+                setStatusBar($statusText);
+            });
+            socket.on('set other seat', function(data){
+                setOtherSeat(data.seatNumber, data.username, data.avatar_path);
+            });
+            socket.on('announce sheriff hunt', function(){
+                announceSheriffHunt();
+            });
+            socket.on('announce sheriff hunt vote', function(){
+                if (!$('.action-sheriffhunt-quit').hasClass('hidden')){
+                    $('.action-sheriffhunt-quit').addClass('hidden');
+                }
+                
+                // 只有没上警的玩家可以投票
+                if (SheriffHuntStatus.CANCEL == sheriffHuntStatus[seatNumber]) {
+                    $('.sheriff-hunt-vote').removeClass('hidden');
+                    validCandidates = [];
+                    for (let i = 0; i < sheriffHuntStatus.length; i++) {
+                        if (SheriffHuntStatus.HUNT == sheriffHuntStatus[i]) {
+                            validCandidates.push(i);
+                        }
+                    }
+                    // 选项5秒后消失
+                    //setTimeout(function(){
+                    //    if (!$('.sheriff-hunt-vote').hasClass('hidden')) {
+                    //        $('.sheriff-hunt-vote').addClass('hidden');
+                    //    }
+                    //}, 5000);
+                }
+            });
+            socket.on('sheriff hunt vote result', function($sheriffHuntVotes){
+                sheriffHuntVotes = $sheriffHuntVotes;
+                sheriffHuntVoteResult($sheriffHuntVotes, true);
+            });
+            socket.on('sheriff hunt vote result again', function($sheriffHuntVotes){
+                sheriffHuntVotes = $sheriffHuntVotes;
+                sheriffHuntVoteResult($sheriffHuntVotes, false);
+            });
+            socket.on('announce sheriff hunt vote again', function(){
+                if (!$('.sheriff-hunt-vote').hasClass('hidden')){
+                    $('.sheriff-hunt-vote').addClass('hidden');
+                }
+                
+                // 非候选玩家都可以投票
+                if (!isValidateCandidate(seatNumber)) {
+                    $('.sheriff-hunt-vote-again').removeClass('hidden');
+                }
+            });
+            socket.on('sheriff hunt status', function($sheriffHuntStatus){
+                sheriffHuntStatus = $sheriffHuntStatus;
+                setSheriffHuntStatus(sheriffHuntStatus);
+            });
+            socket.on('unseat other', function(data){
+                unSeatOther(data.seatNumber);
+            });
+            socket.on('kill one', function(data){
+                deadSeats = data.deadSeats;
+                killOne(data.seatNumber);
+            });
+            socket.on('reset game', function(){
+                isInGame = false;
+                role = -1;
+                selfCircleHtml = "";
+                deadSeats = [];
+                sheriffHuntStatus = [];
+                activeTarget = -1;
+                validCandidates = [];
+                $('.death-mask').each(function(){
+                    if (!$(this).hasClass('hidden')) {
+                        $(this).addClass('hidden');
+                    }
+                });
+                $('.sheriff-hunt-icon').each(function(){
+                    $(this).html('');
+                });
+                setStatusBar('准备中');
+            });
+            
+            $('.action-sheriffhunt').click(function(){
+                socket.emit('sheriff hunt ready', seatNumber);
+                $(this).addClass('hidden');
+                $('.action-sheriffhunt-quit').removeClass('hidden');
+            });
+            $('.action-sheriffhunt-quit').click(function(){
+                $(this).addClass('hidden');
+                socket.emit('sheriff hunt quit', seatNumber);
+                sheriffHuntStatus[seatNumber] = SheriffHuntStatus.QUIT;
+                setSheriffHuntStatus(sheriffHuntStatus);
+            });
+            
+            $('.action-sheriff-hunt-vote').click(function(){
+                $(this).attr('disabled', true);
+                socket.emit('sheriff hunt vote', { seatNumber: seatNumber, voteNumber: activeTarget });
+                let $obj = $(this).parent().children('.action-target');
+                if ($obj.hasClass('action-target-active')) {
+                    $obj.removeClass('action-target-active');
+                    $obj.addClass('action-target-inactive');
+                }
+            });
+
+            $('.user-info').click(function(){
+                if (isInGame) {
+                    if (isInVote()) {
+                        let $tmpClickNumber = parseInt($(this).children('.nth-user').val());
+                        if (!isValidateCandidate($tmpClickNumber)) {
+                            return;
+                        }
+                        activeTarget = $tmpClickNumber;
+                        $('.action-target-active').html(numberPlus1(activeTarget));
+                    } else {
+                        // 点自己头像
+                        if (seatNumber == $(this).children('.nth-user').val()) {
+                            // 获取身份
+                            if (role < 0) {
+                                socket.emit('get role', seatNumber);
+                            } else {
+                                switchRoleAndAvatar();
+                            }
+                        }
+                    }
+                } else {
+                    // 点自己头像离开座位
+                    if (seatNumber == $(this).children('.nth-user').val()) {
+                        unSeat(socket);
+                        seatNumber = -1;
+                        return;
+                    }
+                    // 入座
+                    if ($(this).children('.user-circle').hasClass('unseated')) {
+                        if (seatNumber >= 0) {
+                            unSeat(socket);
+                        }
+                        seatNumber = setSeat(socket, $(this), username, avatar_path);
+                    }
+                }
+            });
+        });
+        function isValidateCandidate($seatNumber){
+            return validCandidates.includes(parseInt($seatNumber));
+        }
+
+        function isInVote(){
+            var $result = false;
+            $('.vote').each(function(){
+                if (!$(this).hasClass('hidden')) {
+                    $result = true;
+                }
+            });
+            return $result;
+        }
+
+        function init($socket, token){
+            $socket.emit('get user info', token);
+            $socket.emit('get seat infos');
+            $socket.emit('get death infos');
+            $socket.emit('sheriff hunt status');
+        }
+
+        function announceSheriffHunt(){
+            $('.action-sheriffhunt').removeClass('hidden');
+            // 上警选项3秒后消失
+            //setTimeout(function(){
+            //    if (!$('.action-sheriffhunt').hasClass('hidden')) {
+            //        $('.action-sheriffhunt').addClass('hidden');
+            //    }
+            //}, 3000);
+        }
+
+        function killOne($seatNumber){
+            $obj = $('.nth-user[value="' + $seatNumber + '"]').parent().children('.death-mask');
+            $obj.removeClass('hidden');
+        }
+
+        function checkRole(){
+            selfCircleHtml = getRoleName(role);
+            switchRoleAndAvatar();
+        }
+        
+        function switchRoleAndAvatar(){
+            let $obj = $('.nth-user[value="' + seatNumber + '"]').parent();
+            let user_circle = $obj.children('.user-circle');
+            let html = user_circle.html();
+            user_circle.html(selfCircleHtml);
+            selfCircleHtml = html;
+        }
+
+        function unSeat($socket){
+            let $obj = $('.nth-user[value="' + seatNumber + '"]').parent();
+            let user_circle = $obj.children('.user-circle');
+            user_circle.html('入座');
+            user_circle.removeClass('seated');
+            user_circle.addClass('unseated');
+            $obj.children('.user-name').html('');
+            $socket.emit('unseat', { seatNumber: $obj.children('.nth-user').val() });
+        }
+
+        function getToken() {
+            return Cookies.get('token');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>注册用户</title>
+    <meta content="yes" name="apple-mobile-web-app-capable">
+    <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <link rel="icon" href="icon.png">
+    <link rel="stylesheet" type="text/css" media="screen" href="register.css" />
+    <link rel="stylesheet" type="text/css" media="screen" href="avatar.css" />
+    <script src="jquery-1.12.4.js"></script>
+</head>
+<body>
+        <div class="form">
+            <label for="form_username" class="form-label">用户名</label><br>
+            <input type="text" id="form_username" class="input-text"><br>
+            <label for="form_password" class="form-label">密码</label><br>
+            <input type="password" id="form_password" class="input-text"><br>
+            <label for="form_confirm_password" class="form-label">确认密码</label><br>
+            <input type="password" id="form_confirm_password" class="input-text"><br>
+            <label for="form_upload_pic" class="form-label">点击图标上传头像</label><br>
+            <div class="avatar-upload" id="form_upload_pic">
+                    <img src="blank_avatar.jpg">
+            </div>
+        </div>
+        <script src="avatar.js"></script>
+        <script>
+            new window.AvatarUpload({
+                el: document.querySelector('.avatar-upload'),
+                uploadUrl: 'upload.php',
+                uploadData: {
+                    foo: 'bar',
+                    bar: 'baz'
+                },
+                pretendUpload: false,
+                onError: function(data){
+                    alert("上传失败！");
+                }
+            })
+        </script>
+</body>
+</html>

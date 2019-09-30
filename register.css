@@ -1,0 +1,11 @@
+.avatar-upload {
+    width: 200px;
+    height: 200px;
+    border-radius: 160px;
+    overflow: hidden;
+}
+
+.avatar-upload img {
+    max-width: 200px;
+    max-height: 200px;
+}

@@ -1,0 +1,177 @@
+body {
+    background: #dfdfdf;
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+}
+.hidden{
+    display: none;
+}
+.clear-float {
+    clear: both;
+}
+
+.player-container {
+    height: 600px;
+    max-width: 600px;
+    background: #722d2d;
+}
+
+.user-container {
+    float: left;
+    width: 30%;
+    height: 600px;
+    max-width: 80px;
+}
+
+.user-container-left {
+    background: #ffb3b3;
+}
+
+.mid-container {
+    background: #1796a7;
+    float: left;
+    position: relative;
+    width: 440px;
+    height: 600px;
+}
+
+.game-status {
+    position: absolute;
+    bottom: 0px;
+    left: 0px;
+    width: 440px;
+    height: 30px;
+    line-height: 30px;
+    font-size: 18px;
+    text-align: center;
+    background: #f5d548;
+}
+
+.vote-result-display {
+    position: absolute;
+    top: 0px;
+    left: 50px;
+    right: 50px;
+    bottom: 30px;
+    line-height: 30px;
+    font-size: 18px;
+    text-align: center;
+    background: #4bfff6;
+}
+.vote-result-display-candidate {
+    float: left;
+    margin-right: 5px;
+    font-weight: 600;
+}
+.vote-result-display-voters {
+    float: left;
+}
+
+.user-container-right {
+    float: right;
+    background: #ffb3b3;
+}
+
+.user-circle {
+    width: 60px;
+    height: 60px;
+    text-align: center;
+    line-height: 60px;
+    font-size: 23px;
+    border-radius: 50%;
+    background: #c4e271;
+}
+
+.user-circle img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+}
+
+.user-info {
+    margin: 10px 10px 6px 10px;
+    position: relative;
+    width: 160px;
+}
+
+.user-number {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 60px;
+    height: 60px;
+    text-align: center;
+    line-height: 60px;
+    font-size: 23px;
+    color: #fff;
+    text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+    z-index: 3;
+}
+.death-mask {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 60px;
+    height: 60px;
+    text-align: center;
+    line-height: 60px;
+    border-radius: 50%;
+    background-color: #1b2a2c;
+    opacity: 0.85;
+    color: #610303;
+    font-size: 20px;
+    font-weight: 800;
+    z-index: 2;
+}
+.user-name {
+    z-index: 2;
+    position: absolute;
+    bottom: 0px;
+    width: 100px;
+    height: 30px;
+    line-height: 30px;
+    font-size: 18px;
+}
+.user-name-left {
+    right: 0px;
+    text-align: left;
+}
+.user-name-right {
+    left: -100px;
+    text-align: right;
+}
+.action-button {
+    float: left;
+    padding: 5px;
+    margin: 6px 0 6px 0;
+}
+.role-action {
+    height: 30px;
+    line-height: 30px;
+    font-size: 18px;
+}
+.action-text {
+    float: left;
+}
+.action-target {
+    float: left;
+    text-align: center;
+    width: 30px;
+    height: 30px;
+    font-weight: 600;
+    color: rgb(238, 101, 38);
+}
+.sheriff-hunt-icon {
+    z-index: 2;
+    position: absolute;
+    top: 0px;
+}
+.sheriff-hunt-icon img{
+    width: 20px;
+    height: 20px;
+}
+.sheriff-hunt-icon-left {
+    left: 60px;
+}
+.sheriff-hunt-icon-right {
+    left: -20px;
+}
